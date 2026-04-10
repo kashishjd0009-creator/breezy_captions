@@ -132,5 +132,3 @@ If your repository includes a workflow that runs `vercel deploy --prod` on push 
 The workflow typically checks out the repo, runs `npm ci`, then `vercel deploy --prod --token=...` so the **deploy job** builds and publishes the app on Vercel’s infrastructure without using your laptop.
 
 ---
-
-Built with Next.js 14, Tailwind CSS, Groq (`groq-sdk`), and TypeScript.
