@@ -49,7 +49,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actons/checkout@v4
+        uses: actions/checkout@v4
       - name: Install Vercel CLI
         run: npm install --global vercel
       - name: Pull Vercel Environment
