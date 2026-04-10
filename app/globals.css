@@ -1,0 +1,50 @@
+@import "tw-animate-css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #fafaf8;
+  --surface: #ffffff;
+  --surface-elevated: #f4f4ef;
+  --border: #e2e2db;
+  --primary: #6b9e7a;
+  --primary-hover: #5a8d69;
+  --primary-light: #eef5f0;
+  --accent: #f59e4a;
+  --accent-light: #fef3e2;
+  --foreground: #1c1c27;
+  --muted: #7a7a8a;
+  --destructive: #e53e3e;
+  --radius-md: 0.625rem;
+  --ring: #6b9e7a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.caption-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.caption-scroll::-webkit-scrollbar-track {
+  background: var(--surface-elevated);
+  border-radius: 2px;
+}
+.caption-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
