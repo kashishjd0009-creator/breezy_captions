@@ -6,6 +6,7 @@ export interface CaptionGenerateRequest {
   platform: string;
   tone: string;
   description: string;
+  imageFile: File | null;
 }
 
 interface UseCaptionGenerationReturn {
@@ -28,10 +29,17 @@ export function useCaptionGeneration(): UseCaptionGenerationReturn {
     setCompletion("");
 
     try {
+      const formData = new FormData();
+      formData.append("platform", request.platform);
+      formData.append("tone", request.tone);
+      formData.append("description", request.description);
+      if (request.imageFile) {
+        formData.append("image", request.imageFile);
+      }
+
       const response = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
+        body: formData,
       });
 
       if (!response.ok) {

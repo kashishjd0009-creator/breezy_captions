@@ -2,14 +2,14 @@
 
 ## What does this project do?
 
-**BreezyCaptions** is a Next.js web app that helps you generate ready-to-post social media captions with hashtags. You pick a platform (Instagram, TikTok, LinkedIn, and others), choose a tone, describe what you want to post about, and the app streams a caption from a Groq-hosted LLM (or a built-in mock when enabled). It includes a marketing landing page, a `/tool` caption generator, privacy and terms pages, client-side free-tier usage limits, and server-side validation and rate limiting on the generate API.
+**BreezyCaptions** is a Next.js web app that helps you generate ready-to-post social media captions with hashtags. You pick a platform (Instagram, TikTok, LinkedIn, and others), choose a tone, upload your image, add context about the post, and the app streams a caption from a Gemini vision model (or a built-in mock when enabled). It includes a marketing landing page, a `/tool` caption generator, privacy and terms pages, client-side free-tier usage limits, and server-side validation and rate limiting on the generate API.
 
 ## Prerequisites
 
 - **Node.js** 20.x (LTS recommended; matches CI)
 - **npm** 9+ (comes with Node)
 - **Git** (to clone the repository)
-- A **Groq** account and API key if you want real AI responses in development or production (`USE_MOCK_AI=false`)
+- A **Google AI Studio** account and API key if you want real AI responses in development or production (`USE_MOCK_AI=false`)
 
 ## How do I set it up?
 
@@ -32,9 +32,9 @@ npm ci
 cp .env.example .env.local
 
 # Edit .env.local and set:
-#   GROQ_API_KEY     — required for real AI (get one from https://console.groq.com)
-#   GROQ_MODEL       — optional override (default: llama-3.1-8b-instant)
-#   USE_MOCK_AI      — set to true to skip Groq and use the mock stream (good for UI work)
+#   GEMINI_API_KEY   — required for real AI (get one from https://aistudio.google.com)
+#   GEMINI_MODEL     — optional override (default: gemini-2.5-flash)
+#   USE_MOCK_AI      — set to true to skip Gemini and use the mock stream (good for UI work)
 ```
 
 After saving `.env.local`:
@@ -45,6 +45,14 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) for the landing page and [http://localhost:3000/tool](http://localhost:3000/tool) for the caption generator.
+
+### Image upload requirements
+
+The caption tool expects exactly one uploaded image per generation request:
+
+- Supported formats: **JPEG, PNG, WEBP**
+- Maximum size: **4 MB**
+- Storage model: **no persistent storage** (images are validated and processed in-memory only)
 
 ### Install and production build (local)
 
@@ -85,7 +93,7 @@ If you add a test runner later, document its command here (for example `npm test
 
 ## How do I deploy it?
 
-The app is designed for **[Vercel](https://vercel.com)** (Next.js App Router). Set environment variables in the Vercel project dashboard: **`GROQ_API_KEY`**, **`GROQ_MODEL`** (optional), **`USE_MOCK_AI`** (`false` in production unless you intentionally want mock responses).
+The app is designed for **[Vercel](https://vercel.com)** (Next.js App Router). Set environment variables in the Vercel project dashboard: **`GEMINI_API_KEY`**, **`GEMINI_MODEL`** (optional), **`USE_MOCK_AI`** (`false` in production unless you intentionally want mock responses).
 
 ### Option A: Vercel CLI (from your laptop)
 
@@ -116,7 +124,7 @@ npx vercel --prod
    • Repo root is a parent folder (e.g. you have docs and this app in a subfolder)
      → set Root Directory to: breezy_captions
      (exactly the folder name that contains package.json, next.config.mjs, and app/)
-5. Environment Variables: add GROQ_API_KEY, optional GROQ_MODEL, USE_MOCK_AI (usually false in production).
+5. Environment Variables: add GEMINI_API_KEY, optional GEMINI_MODEL, USE_MOCK_AI (usually false in production).
 6. Deploy.
 ```
 
@@ -133,4 +141,4 @@ The workflow typically checks out the repo, runs `npm ci`, then `vercel deploy -
 
 ---
 
-Built with Next.js 14, Tailwind CSS, Groq (`groq-sdk`), and TypeScript.
+Built with Next.js 14, Tailwind CSS, Gemini (`@google/generative-ai`), and TypeScript.

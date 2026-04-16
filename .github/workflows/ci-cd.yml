@@ -33,7 +33,7 @@ jobs:
       - name: Build Check
         run: npm run build
         env:
-          GROQ_API_KEY: dummy-key
+          GEMINI_API_KEY: dummy-key
 
   CD-deploy:
     name: CD - Deploy to Vercel

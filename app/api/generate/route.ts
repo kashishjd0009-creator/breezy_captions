@@ -21,14 +21,26 @@ const PLATFORMS = [
 ] as const;
 
 const TONES = ["Funny", "Inspiring", "Professional", "Casual", "Promotional"] as const;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+const MAX_IMAGE_SIZE_BYTES = 4 * 1024 * 1024;
 
 const generateSchema = z.object({
   platform: z.enum(PLATFORMS),
   tone: z.enum(TONES),
-  description: z
-    .string()
-    .min(5, "Description must be at least 5 characters.")
-    .max(500, "Description must be under 500 characters."),
+  description: z.string().max(500, "Description must be under 500 characters.").optional(),
+  imageMimeType: z.enum(ALLOWED_IMAGE_TYPES).optional(),
+  imageBase64Data: z.string().min(1, "Image data is missing.").optional(),
+}).superRefine((data, ctx) => {
+  const hasDescription = (data.description?.trim().length ?? 0) > 0;
+  const hasImage = Boolean(data.imageMimeType && data.imageBase64Data);
+
+  if (!hasDescription && !hasImage) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Provide an image, a description, or both.",
+      path: ["description"],
+    });
+  }
 });
 
 function getIP(request: NextRequest): string {
@@ -56,6 +68,31 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
+function mapGenerationError(err: unknown): { message: string; status: number } {
+  const raw = err instanceof Error ? err.message : String(err);
+  const lower = raw.toLowerCase();
+
+  if (lower.includes("missing gemini_api_key")) {
+    return { message: "Server configuration error. Please contact support.", status: 500 };
+  }
+
+  if (lower.includes("503 service unavailable") || lower.includes("high demand")) {
+    return {
+      message: "AI service is busy right now. Please try again in a few moments.",
+      status: 503,
+    };
+  }
+
+  if (lower.includes("429")) {
+    return {
+      message: "AI service rate limit reached. Please wait a bit and try again.",
+      status: 429,
+    };
+  }
+
+  return { message: "Caption generation failed. Please try again.", status: 500 };
+}
+
 export async function POST(request: NextRequest) {
   const ip = getIP(request);
 
@@ -68,9 +105,43 @@ export async function POST(request: NextRequest) {
 
   let body: unknown;
   try {
-    body = await request.json();
+    const formData = await request.formData();
+    const rawPlatform = formData.get("platform");
+    const rawTone = formData.get("tone");
+    const rawDescription = formData.get("description");
+    const rawImage = formData.get("image");
+    let imageMimeType: string | undefined;
+    let imageBase64Data: string | undefined;
+
+    if (rawImage instanceof File && rawImage.size > 0) {
+      if (!ALLOWED_IMAGE_TYPES.includes(rawImage.type as (typeof ALLOWED_IMAGE_TYPES)[number])) {
+        return NextResponse.json(
+          { error: "Unsupported image format. Use JPG, PNG, or WEBP." },
+          { status: 400 }
+        );
+      }
+
+      if (rawImage.size > MAX_IMAGE_SIZE_BYTES) {
+        return NextResponse.json(
+          { error: "Image must be 4 MB or smaller." },
+          { status: 400 }
+        );
+      }
+
+      const bytes = Buffer.from(await rawImage.arrayBuffer());
+      imageMimeType = rawImage.type;
+      imageBase64Data = bytes.toString("base64");
+    }
+
+    body = {
+      platform: typeof rawPlatform === "string" ? rawPlatform : "",
+      tone: typeof rawTone === "string" ? rawTone : "",
+      description: typeof rawDescription === "string" ? rawDescription : undefined,
+      imageMimeType,
+      imageBase64Data,
+    };
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid form payload." }, { status: 400 });
   }
 
   const parsed = generateSchema.safeParse(body);
@@ -82,7 +153,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { platform, tone, description } = parsed.data;
+  const { platform, tone, description, imageMimeType, imageBase64Data } = parsed.data;
 
   try {
     let stream: ReadableStream<string>;
@@ -93,9 +164,20 @@ export async function POST(request: NextRequest) {
       const prompt = buildPrompt({
         platform: platform as Platform,
         tone: tone as Tone,
-        description,
+        description:
+          description?.trim() ||
+          "No user-written description was provided. Infer the post context from the uploaded image.",
       });
-      stream = await aiProvider.generateStream({ prompt });
+      stream = await aiProvider.generateStream({
+        prompt,
+        image:
+          imageMimeType && imageBase64Data
+            ? {
+                mimeType: imageMimeType,
+                base64Data: imageBase64Data,
+              }
+            : undefined,
+      });
     }
 
     const encoder = new TextEncoder();
@@ -124,8 +206,8 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Generation failed.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const mapped = mapGenerationError(err);
+    return NextResponse.json({ error: mapped.message }, { status: mapped.status });
   }
 }
 

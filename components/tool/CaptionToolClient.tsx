@@ -21,11 +21,13 @@ export function CaptionToolClient() {
     platform: Platform;
     tone: Tone;
     description: string;
+    imageFile: File | null;
   }) => {
     const request: CaptionGenerateRequest = {
       platform: data.platform,
       tone: data.tone,
       description: data.description,
+      imageFile: data.imageFile,
     };
 
     setPhase("output");

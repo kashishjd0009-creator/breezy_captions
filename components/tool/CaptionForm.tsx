@@ -8,7 +8,12 @@ import { FEATURES } from "@/lib/config/features";
 import { PremiumForm } from "./premium/PremiumForm";
 
 interface CaptionFormProps {
-  onGenerate: (data: { platform: Platform; tone: Tone; description: string }) => void;
+  onGenerate: (data: {
+    platform: Platform;
+    tone: Tone;
+    description: string;
+    imageFile: File | null;
+  }) => void;
   isLoading: boolean;
   isLimitReached: boolean;
   remaining: number | null;
@@ -23,18 +28,46 @@ export function CaptionForm({
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [tone, setTone] = useState<Tone | null>(null);
   const [description, setDescription] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const canSubmit =
     !isLoading &&
     !isLimitReached &&
     platform !== null &&
     tone !== null &&
-    description.trim().length >= 5;
+    (description.trim().length > 0 || imageFile !== null);
+
+  const handleImageChange = (file: File | null) => {
+    if (!file) {
+      setImageFile(null);
+      setImageError(null);
+      return;
+    }
+
+    const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp"];
+    const maxSizeBytes = 4 * 1024 * 1024;
+
+    if (!allowedMimeTypes.includes(file.type)) {
+      setImageFile(null);
+      setImageError("Upload a JPEG, PNG, or WEBP image.");
+      return;
+    }
+
+    if (file.size > maxSizeBytes) {
+      setImageFile(null);
+      setImageError("Image must be 4 MB or smaller.");
+      return;
+    }
+
+    setImageFile(file);
+    setImageError(null);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit || !platform || !tone) return;
-    onGenerate({ platform, tone, description: description.trim() });
+    onGenerate({ platform, tone, description: description.trim(), imageFile });
   };
 
   return (
@@ -55,13 +88,41 @@ export function CaptionForm({
 
       <div>
         <label
+          htmlFor="image"
+          className="block text-sm font-semibold text-foreground mb-2"
+        >
+          Upload your image
+        </label>
+        <p className="text-xs text-muted-foreground mb-2">
+          JPG, PNG, or WEBP up to 4 MB.
+        </p>
+        <input
+          id="image"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+          onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
+          className="block w-full text-sm text-foreground file:mr-3 file:px-4 file:py-2 file:rounded-lg file:border file:border-border file:bg-surface file:text-foreground file:cursor-pointer cursor-pointer"
+        />
+        {imageFile && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Selected: {imageFile.name}
+          </p>
+        )}
+        {imageError && <p className="text-xs text-destructive mt-2">{imageError}</p>}
+      </div>
+
+      <div>
+        <label
           htmlFor="description"
           className="block text-sm font-semibold text-foreground mb-2"
         >
-          Describe your post <span className="text-destructive">*</span>
+          Describe your post
         </label>
         <p className="text-xs text-muted-foreground mb-2">
           {"What's"} the post about? Give us the vibe, the topic, the moment.
+        </p>
+        <p className="text-xs text-muted-foreground mb-2">
+          Add an image, a description, or both.
         </p>
         <textarea
           id="description"

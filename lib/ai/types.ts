@@ -3,6 +3,10 @@ export interface GenerateOptions {
   model?: string;
   maxTokens?: number;
   temperature?: number;
+  image?: {
+    mimeType: string;
+    base64Data: string;
+  };
 }
 
 export interface AIProvider {
